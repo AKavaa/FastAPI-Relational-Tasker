@@ -1,0 +1,78 @@
+# Project & Task API
+
+A production-style REST API implementation for managing **Projects** and **Tasks** with a many-to-many relationship.
+
+## Tech Stack
+
+- Python 3.11
+- FastAPI + SQLAlchemy
+- PostgreSQL
+- Docker + Docker Compose
+
+## Architecture & Key Decisions
+
+- **Layered structure** (`api`, `schemas`, `models`, `db`, `core`) to keep concerns separated.
+- **Normalized tags model** (`task_tags` table) instead of comma-separated strings for better query performance and correctness.
+- **Many-to-many mapping table** (`task_project`) for Task-Project relationships.
+- **Startup table creation** for simplicity in assignment scope (trade-off: no migration history; for production, Alembic should be added).
+- **Input normalization**: tags are trimmed and lowercased to make tag filtering deterministic.
+
+## API Endpoints
+
+Base path: `/api`
+
+### Projects
+
+- `POST /projects` - create project
+- `GET /projects` - list projects
+- `GET /projects/{project_id}` - get project by id
+- `PATCH /projects/{project_id}` - update project
+- `DELETE /projects/{project_id}` - delete project
+- `GET /projects/{project_id}/tasks` - list all tasks belonging to a specific project
+
+### Tasks
+
+- `POST /tasks` - create task (optionally associate to projects)
+- `GET /tasks` - list tasks
+- `GET /tasks?tag={tag}` - list tasks filtered by specific tag
+- `GET /tasks/{task_id}` - get task by id
+- `PATCH /tasks/{task_id}` - update task
+- `DELETE /tasks/{task_id}` - delete task
+
+### Health
+
+- `GET /health`
+
+## Run with Docker Compose
+
+```bash
+cp .env.example .env
+docker-compose up --build
+```
+
+App URLs:
+- API: http://localhost:8000
+- Swagger UI: http://localhost:8000/docs
+
+## Example cURL
+
+```bash
+# create project
+curl -X POST http://localhost:8000/api/projects   -H "Content-Type: application/json"   -d '{"name":"Website Revamp","budget":12000,"description":"Landing + dashboard","hours_used":12}'
+
+# create task linked to project 1
+curl -X POST http://localhost:8000/api/tasks   -H "Content-Type: application/json"   -d '{"title":"Design hero section","description":"Draft first 3 variants","tags":["UI","Design"],"project_ids":[1]}'
+
+# list tasks by tag
+aurl="http://localhost:8000/api/tasks?tag=design"; curl "$aurl"
+
+# list tasks for project 1
+curl http://localhost:8000/api/projects/1/tasks
+```
+
+## Assumptions / Trade-offs
+
+- Project name is globally unique.
+- `hours_used` and `budget` are non-negative floats.
+- Tags are stored lowercase for consistent matching.
+- For assignment speed, DB schema is auto-created at startup instead of using migrations.
